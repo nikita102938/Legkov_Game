@@ -23,7 +23,7 @@ lst = pygame.sprite.Group()
 lstk = pygame.sprite.Group()
 armor = pygame.sprite.Group()
 sz = (240, 160)
-x, y = 18, 8
+x, y = 88, 8
 y_prig = 17
 music_volume = 0.5
 COINMP3 = pygame.mixer.Sound('data/coin.mp3')
@@ -226,7 +226,7 @@ def city1_kill():
 
 
 def load_image(name, colorkey=None):
-    fullname = os.path.join('../../Game/data', name)
+    fullname = os.path.join('data', name)
     # если файл не существует, то выходим
     if not os.path.isfile(fullname):
         print(f"Файл с изображением '{fullname}' не найден")
@@ -767,6 +767,7 @@ class Blacksmith(pygame.sprite.Sprite):
                                         pl.summ -= i.price
                                         i.price *= 2
                                         PAYMP3.play()
+
                 screen.fill(pygame.Color(133, 187, 204))
                 oblaka.draw(screen)
                 f1.draw(screen)
