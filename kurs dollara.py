@@ -22,8 +22,10 @@ home1 = pygame.sprite.Group()
 lst = pygame.sprite.Group()
 lstk = pygame.sprite.Group()
 armor = pygame.sprite.Group()
+boss = pygame.sprite.Group()
+boom = pygame.sprite.Group()
 sz = (240, 160)
-x, y = 88, 8
+x, y = 25, 8
 y_prig = 17
 music_volume = 0.5
 COINMP3 = pygame.mixer.Sound('data/coin.mp3')
@@ -44,7 +46,11 @@ for i in all_volume:
     i.set_volume(music_volume)
 st_time = time.time()
 
-buy_cena = [25, 25, 25, 25, 25]
+buy_cena = [[1, (0, 200, 0, 0)],
+            [1, (0, 300, -1, -1)],
+            [1, (0, 0, 0, 1)],
+            [1, (3, 0, 0, 0)],
+            [1, (0, 0, 1, 0)]]
 
 
 class Play_bt(pygame.sprite.Sprite):
@@ -104,7 +110,7 @@ def start():
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if pygame.mouse.get_pressed()[0]:
                     running = pl_b.click(event.pos)
-                    if not(running):
+                    if not (running):
                         for i in play:
                             i.kill()
                     if not (ex_b.click(event.pos)):
@@ -118,11 +124,17 @@ def start():
     pl_b.kill()
 
 
-def end():
-    screen.fill('white')
-    pygame.display.flip()
+def end(st=0):
+    screen.fill('black')
     pygame.mixer.music.stop()
     running = True
+    if st:
+        jpg = load_image('win.jpg')
+        screen.blit(jpg, (0, 0))
+    else:
+        jpg = load_image('lose.png')
+        screen.blit(jpg, (0, 0))
+    pygame.display.flip()
     while running:
         for event in pygame.event.get():
             if event.type in [pygame.QUIT, pygame.MOUSEBUTTONDOWN, pygame.KEYDOWN]:
@@ -176,6 +188,8 @@ def pause():
         mobs.draw(screen)
         player.draw(screen)
         yandex.draw(screen)
+        boss.draw(screen)
+        boom.draw(screen)
         pygame.draw.rect(screen, 'red' if pl.dm else 'green', (10, 10, 200 * pl.hp / hp, 20))
         pygame.draw.rect(screen, 'white', (8, 8, 204, 24), 3)
         screen.blit(money, (5, 40))
@@ -415,8 +429,7 @@ class Player(pygame.sprite.Sprite):
             self.atk = f
             self.img = img
             self.timer_atk = time.time()
-            """SWORDPLMP3.play()"""
-            MMM.play()
+            SWORDPLMP3.play()
         elif self.atk > 0:
             if sh:
                 if self.cut_l == 'run_right':
@@ -438,6 +451,9 @@ class Player(pygame.sprite.Sprite):
             for i in mobs:
                 if pygame.sprite.collide_mask(self, i):
                     i.update(hp=self.atk_mobs)
+            for i in boss:
+                if pygame.sprite.collide_mask(self, i):
+                    i.dmg(hp=self.atk_mobs)
 
     def mask_peres(self):
         for i in texture:
@@ -727,11 +743,16 @@ class Blacksmith(pygame.sprite.Sprite):
         if fl:
             pygame.mixer.music.pause()
             running = True
-            Armor(1380, 80, 'helmet.png', 'helmet_s.png', (32 * 3, 36 * 3), buy_cena[0], [])
-            Armor(1338, 195, 'breastplate.png', 'breastplate_s.png', (60 * 3, 50 * 3), buy_cena[1], [])
-            Armor(1368, 350, 'pants.png', 'pants_s.png', (40 * 3, 38 * 3), buy_cena[2], [])
-            Armor(1620, 160, 'sword_k.png', 'sword_k_s.png', (12 * 6, 54 * 6), buy_cena[3], [])
-            Armor(1342, 480, 'bb.png', 'bb_s.png', (174, 112), buy_cena[4], [])
+            Armor(1380, 80, 'helmet.png', 'helmet_s.png', (32 * 3, 36 * 3),
+                  buy_cena[0][0], buy_cena[0][1])
+            Armor(1338, 195, 'breastplate.png', 'breastplate_s.png',
+                  (60 * 3, 50 * 3), buy_cena[1][0], buy_cena[1][1])
+            Armor(1368, 350, 'pants.png', 'pants_s.png', (40 * 3, 38 * 3),
+                  buy_cena[2][0], buy_cena[2][1])
+            Armor(1620, 160, 'sword_k.png', 'sword_k_s.png',
+                  (12 * 6, 54 * 6), buy_cena[3][0], buy_cena[3][1])
+            Armor(1342, 480, 'bb.png', 'bb_s.png', (174, 112), buy_cena[4][0],
+                  buy_cena[4][1])
             global flmouse
             buy = []
             rmk = pygame.transform.scale(load_image('ramka_2.png', -1), (62 * 10.2, 62 * 10.2))
@@ -745,7 +766,7 @@ class Blacksmith(pygame.sprite.Sprite):
                             running = False
                             k = 0
                             for i in armor:
-                                buy_cena[k] = i.price
+                                buy_cena[k][0] = i.price
                                 k += 1
                                 i.kill()
                             pygame.mixer.music.unpause()
@@ -757,6 +778,7 @@ class Blacksmith(pygame.sprite.Sprite):
                             if i.click(event.pos):
                                 buy = ['1']
                                 fl_m = 0
+                                break
                         if fl_m:
                             buy = []
                     if event.type == pygame.MOUSEBUTTONDOWN:
@@ -765,9 +787,16 @@ class Blacksmith(pygame.sprite.Sprite):
                                 if i.click(event.pos):
                                     if i.price <= pl.summ:
                                         pl.summ -= i.price
+                                        global hp
+                                        global x
+                                        global y_prig
                                         i.price *= 2
                                         PAYMP3.play()
-
+                                        pl.atk_mobs += i.inf[0]
+                                        hp += i.inf[1]
+                                        pl.hp += i.inf[1]
+                                        x += i.inf[2]
+                                        y_prig += i.inf[3]
                 screen.fill(pygame.Color(133, 187, 204))
                 oblaka.draw(screen)
                 f1.draw(screen)
@@ -786,6 +815,26 @@ class Blacksmith(pygame.sprite.Sprite):
                 armor.draw(screen)
                 if len(buy) > 0:
                     screen.blit(rmk_buy, (1008, 10))
+                    txt_x = 50
+                    if i.inf[0] != 0:
+                        txt = arm_font.render(('+' if i.inf[0] > 0 else '') + str(i.inf[0]) + ' АТК', False, 'white')
+                        screen.blit(txt, (1030, txt_x))
+                        txt_x += 20
+                    if i.inf[1] != 0:
+                        txt = arm_font.render(('+' if i.inf[1] > 0 else '') + str(i.inf[1]) + ' HP', False, 'white')
+                        screen.blit(txt, (1030, txt_x))
+                        txt_x += 20
+                    if i.inf[2] != 0:
+                        txt = arm_font.render(('+' if i.inf[2] > 0 else '') + str(i.inf[2]) + ' SPEED', False, 'white')
+                        screen.blit(txt, (1030, txt_x))
+                        txt_x += 20
+                    if i.inf[3] != 0:
+                        txt = arm_font.render(('+' if i.inf[3] > 0 else '') + str(i.inf[3]) + ' JUMP', False, 'white')
+                        screen.blit(txt, (1030, txt_x))
+                        txt_x += 20
+                    txt_x += 30
+                    txt = arm_font.render(str(i.price), False, 'white')
+                    screen.blit(txt, (1040, txt_x))
                 if flmouse != 0 and pygame.mouse.get_focused():
                     screen.blit(arrow, flmouse)
                     pygame.mouse.set_visible(False)
@@ -959,6 +1008,96 @@ class Yandex(pygame.sprite.Sprite):
         self.rect.y = pos_y
 
 
+class Boss(pygame.sprite.Sprite):
+    def __init__(self, pos):
+        super().__init__(boss, all_sprites)
+        self.cut = 0
+        self.cut_run = 1
+        self.run = cut_sheet('Spellsword sprite sheet walk', 12, 1, sz=(108 * 4.3, 93 * 4.3))
+        self.atk = cut_sheet('Spellsword sprite sheet attack 1', 9, 1, sz=(108 * 4.3, 93 * 4.3))
+        self.atk_m1 = cut_sheet('Spellsword sprite sheet enchant', 10, 1, sz=(108 * 4.3, 93 * 4.3))
+        self.image = self.run[1][0]
+        self.rect = self.image.get_rect()
+        self.rect.x = pos[0]
+        self.rect.y = pos[1]
+        self.atk_status = 1
+        self.atk1_status = 0
+        self.atk2_status = 0
+        self.hp = 1500
+        self.mask = pygame.mask.from_surface(self.image)
+
+    def update(self, x=0, cut_run=-1):
+        # бить ходить магия
+        # можно написать типо если выпал урон вблизи то идти, если нет то магия
+        if self.atk_status == 1:
+            if self.atk1_status > 1:
+                self.image = self.atk[0 if pl.rect.x > self.rect.x + 20 else 1][9 - self.atk1_status // 2]
+                self.atk1_status -= 1
+                self.mask = pygame.mask.from_surface(self.image)
+                if pygame.sprite.collide_mask(self, pl) and self.atk1_status // 2 == 8:
+                    pl.dmg(200)
+            elif self.atk1_status == 1:
+                self.atk_status = 0
+                self.atk1_status = 0
+            else:
+                if pl.rect.x < self.rect.x:
+                    self.rect.x -= 20
+                    self.cut_run = (self.cut_run + 1) % 12
+                    self.image = self.run[1][self.cut_run]
+                elif pl.rect.x - 200 > self.rect.x:
+                    self.rect.x += 15
+                    self.cut_run = (self.cut_run + 1) % 12
+                    self.image = self.run[0][self.cut_run]
+                else:
+                    self.atk1_status = 20
+                    if pl.rect.x > self.rect.x + 20:
+                        self.image = self.run[0][0]
+                    else:
+                        self.image = self.run[1][0]
+        elif self.atk_status == 2:
+            if self.atk2_status == 0:
+                self.atk2_status = 20
+                self.hp = min(self.hp + 20, 1500)
+            else:
+                self.atk2_status -= 1
+                if self.atk2_status == 0:
+                    self.atk_status = 0
+                    for i in range(3):
+                        Boom((random.randint(1, 2000), 500))
+                self.image = self.atk_m1[0 if pl.rect.x > self.rect.x + 20 else 1][9 - self.atk2_status // 2]
+        else:
+            self.atk_status = random.randint(1, 3)
+
+    def dmg(self, hp):
+        self.hp -= hp
+        print(self.hp)
+        if self.hp <= 0:
+            self.kill()
+            end(1)
+
+
+class Boom(pygame.sprite.Sprite):
+    def __init__(self, pos):
+        super().__init__(boom, all_sprites)
+        self.cut = 30
+        self.atk_boom = cut_sheet('boom_boss', 16, 1, sz=(68 * 1.8, 70 * 1.8))[0]
+        self.image = self.atk_boom[15 - self.cut // 2]
+        self.rect = self.image.get_rect()
+        self.rect.x = pos[0]
+        self.rect.y = pos[1]
+        self.mask = pygame.mask.from_surface(self.image)
+
+    def update(self):
+        self.cut -= 1
+        if self.cut < 0:
+            self.kill()
+        else:
+            self.image = self.atk_boom[15 - self.cut // 2]
+            self.mask = pygame.mask.from_surface(self.image)
+            if pygame.sprite.collide_mask(pl, self):
+                pl.dmg(6)
+
+
 if __name__ == '__main__':
     pygame.init()
     start()
@@ -979,6 +1118,11 @@ if __name__ == '__main__':
     MOB = pygame.USEREVENT + 6
     OBLAKA = pygame.USEREVENT + 7
     BLACKSMITH = pygame.USEREVENT + 8
+    TIMER = pygame.USEREVENT + 9
+    BOSS = pygame.USEREVENT + 10
+    BOOM = pygame.USEREVENT + 11
+    pygame.time.set_timer(BOOM, 50)
+    pygame.time.set_timer(TIMER, 1000)
     pygame.time.set_timer(BLACKSMITH, 100)
     pygame.time.set_timer(OBLAKA, 100)
     pygame.time.set_timer(MOB, 55)
@@ -987,6 +1131,7 @@ if __name__ == '__main__':
     pygame.time.set_timer(HODR, 0)
     pygame.time.set_timer(HODPROB, 0)
     pygame.time.set_timer(HODSTOP, 50)
+    pygame.time.set_timer(BOSS, 60)
     sh = 0
     atk = 0
     hp = 1000
@@ -994,6 +1139,8 @@ if __name__ == '__main__':
     jump = 17
     flmouse = 0
     kd_atk = 1
+    timer = 300
+    bb = -1
     camera = Camera()
     e = pygame.transform.scale(load_image('e.png'), (32 * 2, 32 * 2))
     sword_kd = pygame.transform.scale(load_image('Sword4.png', -1), (200, 40))
@@ -1007,14 +1154,14 @@ if __name__ == '__main__':
         Yandex(-500, 100 * i, 'yandex.png', (200, 150))
     for i in range(-1, 7):
         Fon1((i * 300, 470), 'Ground.png', (353, 180), f=1)
-    for i in range(2, 10):
+    for i in range(2, 50):
         if i % 3 != 0:
             i = (1000 * i, 507)
             Skelet(i[0], i[1],
                    [['Skeleton_01_White_Walk', 10, 1], ['Skeleton_01_White_Attack2', 9, 1],
                     ['Skeleton_01_White_Die', 13, 1],
                     ['Skeleton_01_White_Hurt', 5, 1]], pl, 100, 9, 5)
-    for i in range(1, 6):
+    for i in range(1, 30):
         i = (3000 * i, 507)
         Skelet(i[0], i[1],
                [['Skeleton_01_Yellow_Walk', 10, 1], ['Skeleton_01_Yellow_Attack1', 10, 1],
@@ -1022,16 +1169,27 @@ if __name__ == '__main__':
                 ['Skeleton_01_Yellow_Hurt', 5, 1]], pl, 300, 10, 10)
     for i in range(8):
         Angel(10000 * i, 556 - 144, 'statya.png', (64 * 3, 72 * 3), 1000, 100)
-    money = pygame.transform.scale(load_image('coin.png', -1).subsurface(pygame.Rect(0, 0, 16, 16)), (32, 32))
+    money = pygame.transform.scale(load_image('coin.png', -1).subsurface(pygame.Rect(0, 0, 16, 16)),
+                                   (32, 32))
     my_font = pygame.font.SysFont('Comic Sans MS', 24)
+    arm_font = pygame.font.SysFont('ttf', 30)
+    time_font = pygame.font.SysFont('timer', 60)
+    text_time = time_font.render(str(timer // 60) + ':' + str(timer % 60), False, 'black')
     arrow = load_image('01.png', -1)
     for i in range(20):
-        Fon1((i * 37 * 3 - 79, 147 if i % 2 == 0 else 187), 'Pine Tree - GREEN  - 0000.png', (53 * 5, 96 * 5))
+        Fon1((i * 37 * 3 - 79, 147 if i % 2 == 0 else 187),
+             'Pine Tree - GREEN  - 0000.png', (53 * 5, 96 * 5))
     for i in range(10):
         Fon1((i * 74 * 3 - 100, 260), 'Large Spruce Tree - GREEN_TEAL - 0000.png', (74 * 3, 128 * 3))
     for i in range(10):
-        Fon1((i * 74 * 3 + 37 * 3 - 118.5, 196), 'Large Spruce Tree - NIGHT - 0000.png', (74 * 3 + 37, 128 * 3 + 64))
+        Fon1((i * 74 * 3 + 37 * 3 - 118.5, 196),
+             'Large Spruce Tree - NIGHT - 0000.png', (74 * 3 + 37, 128 * 3 + 64))
     while running:
+        if bb == -1 and timer < 1:
+            bb = Boss((1000, 341))
+            for i in range(-1, 6):
+                Yandex(0, 100 * i, 'yandex.png', (200, 150))
+                Yandex(1800, 100 * i, 'yandex.png', (200, 150))
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -1094,6 +1252,14 @@ if __name__ == '__main__':
                 elif camera.ox > 6500 or camera.ox < 0:
                     city1_kill()
                 player.update(1, 0, sh)
+                for i in yandex:
+                    if pygame.sprite.collide_mask(pl, i):
+                        fly = 0
+                        if event.type == HODL:
+                            pl.rect.x += 100
+                        elif event.type == HODR:
+                            pl.rect.x -= 100
+                        break
             if event.type == HODL:
                 fly = 1
                 f = 1
@@ -1105,10 +1271,12 @@ if __name__ == '__main__':
                 elif camera.ox > 6500 or camera.ox < 0:
                     city1_kill()
                 for i in yandex:
-                    if pygame.sprite.collide_rect(pl, i):
+                    if pygame.sprite.collide_mask(pl, i):
                         fly = 0
-                        pygame.time.set_timer(HODL, 0)
-                        player.update(0, 0, sh)
+                        if event.type == HODL:
+                            pl.rect.x += 100
+                        elif event.type == HODR:
+                            pl.rect.x -= 100
                         break
                 if fly:
                     player.update(-1, 0, sh)
@@ -1146,9 +1314,18 @@ if __name__ == '__main__':
                 flmouse = event.pos
             if event.type == OBLAKA:
                 oblaka.update()
-        camera.update(pl)
-        for sprite in all_sprites:
-            camera.apply(sprite)
+            if event.type == TIMER:
+                timer -= 1
+                text_time = time_font.render(str(timer // 60) + ':' + str(timer % 60), False, 'black')
+            if event.type == BOSS and timer < 1:
+                bb.update()
+            if event.type == BOOM:
+                for i in boom:
+                    i.update()
+        if timer > 0:
+            camera.update(pl)
+            for sprite in all_sprites:
+                camera.apply(sprite)
         fle = 0
         for i in nps:
             if pygame.sprite.collide_mask(pl, i):
@@ -1163,11 +1340,16 @@ if __name__ == '__main__':
         mobs.draw(screen)
         player.draw(screen)
         yandex.draw(screen)
+        boss.draw(screen)
+        boom.draw(screen)
         pygame.draw.rect(screen, 'red' if pl.dm else 'green', (10, 10, 200 * pl.hp / hp, 20))
         pygame.draw.rect(screen, 'white', (8, 8, 204, 24), 3)
         screen.blit(money, (5, 40))
         text_surface = my_font.render(str(pl.summ), False, 'white')
         screen.blit(text_surface, (35, 38))
+        if timer < 1 and bb != -1:
+            pygame.draw.rect(screen, 'red', (600, 10, 600 / 1500 * bb.hp, 20))
+            pygame.draw.rect(screen, 'white', (8, 8, 204, 24), 3)
         if time.time() - pl.timer_atk > kd_atk:
             screen.blit(sword_kdno, (5, 75))
         else:
@@ -1176,6 +1358,7 @@ if __name__ == '__main__':
                              (4, 93, min(int((time.time() - pl.timer_atk) / kd_atk * 200), 200), 5))
         if fle:
             screen.blit(e, (250, 10))
+        screen.blit(text_time, (1800, 30))
         if flmouse != 0 and pygame.mouse.get_focused():
             screen.blit(arrow, flmouse)
             pygame.mouse.set_visible(False)
