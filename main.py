@@ -257,7 +257,7 @@ def load_image(name, colorkey=None):
 
 
 def cut_sheet(sheet, columns, rows, sz=(240, 160)):
-    sprite = pygame.image.load("data\{0}.png".format(sheet)).convert_alpha()
+    sprite = pygame.image.load(os.path.join("data", f"{sheet}.png")).convert_alpha()
     framer = []
     framel = []
     width, height = sprite.get_size()
@@ -267,7 +267,7 @@ def cut_sheet(sheet, columns, rows, sz=(240, 160)):
         for i in range(columns):
             framer.append(pygame.transform.scale(sprite.subsurface(pygame.Rect(i * w, z, w, h)), sz))
         z += 1
-    sprite = pygame.image.load("data\{0}.png".format(sheet)).convert_alpha()
+    sprite = pygame.image.load(os.path.join("data", f"{sheet}.png")).convert_alpha()
     sprite = pygame.transform.flip(sprite, 1, 0)
     z = 0
     for j in range(rows):
@@ -1070,7 +1070,6 @@ class Boss(pygame.sprite.Sprite):
 
     def dmg(self, hp):
         self.hp -= hp
-        print(self.hp)
         if self.hp <= 0:
             self.kill()
             end(1)
